@@ -83,6 +83,38 @@ usage(FILE *f)
     fputs("  -v        verbose messages\n", f);
 }
 
+static int fds[16];
+static int nfds = 0;
+
+void
+fds_push(int fd)
+{
+    if (nfds == (int)countof(fds))
+        fatal("too many open file descriptors");
+    fds[nfds++] = fd;
+}
+
+static int
+fds_find(int fd)
+{
+    for (int i = 0; i < nfds; i++)
+        if (fds[i] == fd)
+            return 1;
+    return 0;
+}
+
+static int
+fds_remove(int fd)
+{
+    for (int i = 0; i < nfds; i++) {
+        if (fds[i] == fd) {
+            fds[i] = fds[--nfds];
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -171,8 +203,6 @@ main(int argc, char **argv)
             ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_EXITKILL);
     }
 
-    int nmonitor = 0;
-    int monitor_fd[16];
     size_t buflen = 0;
     unsigned char *buf = 0;
 
@@ -217,8 +247,6 @@ main(int argc, char **argv)
                     fatal("%s", strerror(errno));
                 if (!memcmp(path, "/dev/random", 12) ||
                     !memcmp(path, "/dev/urandom", 13)) {
-                    if (nmonitor == (int)countof(monitor_fd))
-                        fatal("too many open file descriptors");
                     capture_fd = 1;
                 }
             } break;
@@ -228,29 +256,21 @@ main(int argc, char **argv)
              */
             case SYS_close: {
                 int fd = regs.rdi;
-                for (int i = 0; i < nmonitor; i++) {
-                    if (monitor_fd[i] == fd) {
-                        monitor_fd[i] = monitor_fd[--nmonitor];
-                        if (verbose)
-                            fprintf(stderr,"keyed: close(%d)\n", fd);
-                        break;
-                    }
-                }
+                if (fds_remove(fd) && verbose)
+                    fprintf(stderr,"keyed: close(%d)\n", fd);
             } break;
 
             /* Intercept read(2) to /dev/random and /dev/urandom.
              */
-            case SYS_read: {
+            case SYS_read:
+            case SYS_pread64: {
                 int fd = regs.rdi;
-                for (int i = 0; i < nmonitor; i++) {
-                    if (monitor_fd[i] == fd) {
-                        dest = regs.rsi;
-                        size = regs.rdx;
-                        if (verbose)
-                            fprintf(stderr,"keyed: read(%d, 0x%llx, %llu)\n",
-                                    fd, regs.rsi, regs.rdx);
-                        break;
-                    }
+                if (fds_find(fd)) {
+                    dest = regs.rsi;
+                    size = regs.rdx;
+                    if (verbose)
+                        fprintf(stderr,"keyed: read(%d, 0x%llx, %llu)\n",
+                                fd, regs.rsi, regs.rdx);
                 }
             } break;
 
@@ -262,6 +282,29 @@ main(int argc, char **argv)
                 if (verbose)
                     fprintf(stderr,"keyed: getrandom(0x%llx, %llu)\n",
                             regs.rdi, regs.rsi);
+            } break;
+
+            /* Track duplicated entropy file descriptors.
+             */
+            case SYS_dup:
+            case SYS_dup2:
+            case SYS_dup3: {
+                int fd = regs.rdi;
+                if (fds_find(fd))
+                    capture_fd = 1;
+            } break;
+
+            /* Block alternative reads (for now).
+             */
+            case SYS_readv:
+            case SYS_preadv:
+            case SYS_preadv2: {
+                int fd = regs.rdi;
+                if (fds_find(fd)) {
+                    regs.orig_rax = -1; // set to invalid system call
+                    if (verbose)
+                        fprintf(stderr,"keyed: readv(%d, ...)\n", fd);
+                }
             } break;
         }
 
@@ -310,9 +353,11 @@ main(int argc, char **argv)
             if (ptrace(PTRACE_GETREGS, pid, 0, &regs) == -1)
                 fatal("%s", strerror(errno));
             int fd = regs.rax;
-            monitor_fd[nmonitor++] = fd;
-            if (verbose)
-                fprintf(stderr, "keyed: monitoring fd %d\n", fd);
+            if (fd != -1) {
+                fds_push(fd);
+                if (verbose)
+                    fprintf(stderr, "keyed: monitoring fd %d\n", fd);
+            }
         }
 
         switch (syscall) {

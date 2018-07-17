@@ -55,9 +55,7 @@ to `ptrace(2)`, like ASLR and random stack gap.
 
 ## TODO
 
-* Monitor `dup(2)`, `dup2(2)`, and `dup3(2)`.
-* Monitor other kinds of reads like `pread(2)`, `readv(2)`, `preadv(2)`,
-  and `preadv2(2)`.
+* Follow `fork(2)`, `vfork(2)`, and `clone(2)`.
 
 
 [lib]: https://libsodium.org/
