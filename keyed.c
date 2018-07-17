@@ -180,8 +180,8 @@ main(int argc, char **argv)
     /* Derive a key from the passphrase */
     unsigned char salt[crypto_pwhash_SALTBYTES] = {0};
     unsigned char key[crypto_pwhash_scryptsalsa208sha256_STRBYTES];
-    unsigned long long opslimit = crypto_pwhash_OPSLIMIT_MODERATE;
-    size_t memlimit = crypto_pwhash_MEMLIMIT_MODERATE;
+    unsigned long long opslimit = 6; // "moderate"
+    size_t memlimit = 134217728; // "moderate"
     int alg = crypto_pwhash_ALG_DEFAULT;
     if (crypto_pwhash(key, sizeof(key), passphrase, strlen(passphrase),
                       salt, opslimit, memlimit, alg) != 0) {
