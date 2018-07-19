@@ -18,6 +18,8 @@
 
 #include <sodium.h>
 
+#include "chacha20.h"
+
 #define countof(a) (sizeof(a) / sizeof(0[a]))
 
 #define PASSPHRASE_MAX 1024
@@ -178,8 +180,8 @@ main(int argc, char **argv)
     }
 
     /* Derive a key from the passphrase */
+    unsigned char key[CHACHA20_KEYSIZE];
     unsigned char salt[crypto_pwhash_SALTBYTES] = {0};
-    unsigned char key[crypto_pwhash_scryptsalsa208sha256_STRBYTES];
     unsigned long long opslimit = 6; // "moderate"
     size_t memlimit = 134217728; // "moderate"
     int alg = crypto_pwhash_ALG_DEFAULT;
@@ -188,6 +190,13 @@ main(int argc, char **argv)
         fputs("not enough memory to derive key", stderr);
         exit(EXIT_FAILURE);
     }
+
+    /* Initialize ChaCha20 */
+    struct chacha20 chacha20[1];
+    unsigned char iv[CHACHA20_IVSIZE] = {
+        0x18, 0x5f, 0xf8, 0xf4, 0x3d, 0xe7, 0xc4, 0x42
+    };
+    chacha20_init(chacha20, key, iv);
 
     /* Exec the given command */
     pid_t pid = fork();
@@ -227,6 +236,7 @@ main(int argc, char **argv)
              */
             case SYS_exit:
             case SYS_exit_group: {
+                free(buf);
                 exit(regs.rdi);
             } break;
 
@@ -330,9 +340,7 @@ main(int argc, char **argv)
 
         /* Write requested random bytes into child's buffer */
         if (size) {
-            static const unsigned char
-                nonce[crypto_stream_chacha20_NONCEBYTES] = {0};
-            crypto_stream_chacha20(buf, size, nonce, key);
+            chacha20_keystream_bytes(chacha20, buf, size);
             struct iovec liov = {
                 .iov_base = buf,
                 .iov_len = size
