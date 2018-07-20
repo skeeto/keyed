@@ -372,7 +372,6 @@ argon2_encodedlen(uint32_t t_cost, uint32_t m_cost,
 
 /* Implementation */
 
-#include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1968,8 +1967,13 @@ encode_string(char *dst, size_t dst_len, argon2_context *ctx,
 #define SX(x)                                                                  \
     do {                                                                       \
         char tmp[30];                                                          \
-        sprintf(tmp, "%lu", (unsigned long)(x));                               \
-        SS1(tmp);                                                              \
+        char *p = tmp + sizeof(tmp);                                           \
+        unsigned long v = x;                                                   \
+        *--p = 0;                                                              \
+        do {                                                                   \
+            *--p = '0' + (v % 10);                                             \
+        } while (v /= 10);                                                     \
+        SS1(p);                                                                \
     } while ((void)0, 0)
 
 #define SB(buf, len)                                                           \
