@@ -16,8 +16,7 @@
 #include <sys/uio.h>
 #include <sys/ptrace.h>
 
-#include <sodium.h>
-
+#include "argon2.h"
 #include "chacha20.h"
 
 #define countof(a) (sizeof(a) / sizeof(0[a]))
@@ -181,12 +180,13 @@ main(int argc, char **argv)
 
     /* Derive a key from the passphrase */
     unsigned char key[CHACHA20_KEYSIZE];
-    unsigned char salt[crypto_pwhash_SALTBYTES] = {0};
-    unsigned long long opslimit = 6; // "moderate"
-    size_t memlimit = 134217728; // "moderate"
-    int alg = crypto_pwhash_ALG_DEFAULT;
-    if (crypto_pwhash(key, sizeof(key), passphrase, strlen(passphrase),
-                      salt, opslimit, memlimit, alg) != 0) {
+    unsigned char salt[8] = {0};
+    unsigned long long t_cost = 3;
+    size_t m_cost = 1UL << 18;
+    if (argon2id_hash_raw(t_cost, m_cost, 1,
+                          passphrase, strlen(passphrase),
+                          salt, sizeof(salt),
+                          key, sizeof(key)) != ARGON2_OK) {
         fputs("not enough memory to derive key", stderr);
         exit(EXIT_FAILURE);
     }
@@ -381,4 +381,12 @@ main(int argc, char **argv)
             } break;
         }
     }
+
+    (void)argon2_encodedlen;
+    (void)argon2_error_message;
+    (void)argon2id_hash_encoded;
+    (void)argon2d_hash_raw;
+    (void)argon2d_hash_encoded;
+    (void)argon2i_hash_raw;
+    (void)argon2i_hash_encoded;
 }

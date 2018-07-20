@@ -9,7 +9,7 @@ deterministic output for a specific target process.
 One primary use is to force key generation derive from a passphrase even
 for programs that do not support such a feature.
 
-Requires x86-64 Linux and [libsodium][libsodium].
+Requires x86-64 Linux.
 
 ## Usage
 
@@ -58,5 +58,4 @@ to `ptrace(2)`, like ASLR and random stack gap.
 * Follow `fork(2)`, `vfork(2)`, and `clone(2)`.
 
 
-[lib]: https://libsodium.org/
 [ptrace]: https://nullprogram.com/blog/2018/06/23/

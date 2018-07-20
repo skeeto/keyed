@@ -1,4 +1,6 @@
-/* Public domain. */
+/* ChaCha20 (C99)
+ * This is free and unencumbered software released into the public domain.
+ */
 #include <stdint.h>
 
 #define CHACHA20_KEYSIZE  32
@@ -10,6 +12,11 @@ struct chacha20 {
     int outlen;
 };
 
+static void chacha20_init(struct chacha20 *, const void *key, const void *iv);
+static void chacha20_keystream_bytes(struct chacha20 *, void *, size_t);
+
+/* Implementation */
+
 #define CHACHA20_ROTATE(v,n) (((v) << (n)) | ((v) >> (32 - (n))))
 #define CHACHA20_QUARTERROUND(a,b,c,d) \
     x[a] += x[b]; x[d] = CHACHA20_ROTATE(x[d] ^ x[a],16); \
@@ -18,9 +25,9 @@ struct chacha20 {
     x[c] += x[d]; x[b] = CHACHA20_ROTATE(x[b] ^ x[c], 7)
 
 static void
-chacha20_store_u32le(void *k, uint32_t x)
+chacha20_store_u32le(void *buf, uint32_t x)
 {
-    unsigned char *p = k;
+    unsigned char *p = buf;
     p[0] = x >>  0;
     p[1] = x >>  8;
     p[2] = x >> 16;
@@ -28,9 +35,9 @@ chacha20_store_u32le(void *k, uint32_t x)
 }
 
 static uint32_t
-chacha20_load_u32le(const void *k)
+chacha20_load_u32le(const void *buf)
 {
-    const unsigned char *p = k;
+    const unsigned char *p = buf;
     return (uint32_t)p[0] <<  0 |
            (uint32_t)p[1] <<  8 |
            (uint32_t)p[2] << 16 |
@@ -60,7 +67,6 @@ salsa20_wordtobyte(unsigned char output[64], const uint32_t input[16])
     for (i = 0; i < 16; i++)
         chacha20_store_u32le(output + 4 * i, x[i]);
 }
-
 
 static void
 chacha20_init(struct chacha20 *x, const void *key, const void *iv)
