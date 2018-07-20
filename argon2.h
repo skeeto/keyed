@@ -353,7 +353,7 @@ argon2_hash(const uint32_t t_cost, const uint32_t m_cost,
 static const char *
 argon2_error_message(int error_code);
 
-#if ARGON2_ENCODED
+#ifdef ARGON2_ENCODED
 /**
  * Returns the encoded hash length for the given input parameters
  * @param t_cost  Number of iterations
@@ -977,7 +977,11 @@ fill_memory_blocks_st(argon2_instance_t *instance)
     for (r = 0; r < instance->passes; ++r) {
         for (s = 0; s < ARGON2_SYNC_POINTS; ++s) {
             for (l = 0; l < instance->lanes; ++l) {
-                argon2_position_t position = {r, l, (uint8_t)s, 0};
+                argon2_position_t position;
+                position.pass = r;
+                position.lane = l;
+                position.slice = (uint8_t)s;
+                position.index = 0;
                 fill_segment(instance, position);
             }
         }
@@ -1965,7 +1969,7 @@ encode_string(char *dst, size_t dst_len, argon2_context *ctx,
     do {                                                                       \
         char tmp[30];                                                          \
         sprintf(tmp, "%lu", (unsigned long)(x));                               \
-        SS1(tmp);                                                               \
+        SS1(tmp);                                                              \
     } while ((void)0, 0)
 
 #define SB(buf, len)                                                           \
