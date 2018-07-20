@@ -20,6 +20,20 @@
 
 /* Interface */
 
+/* By default the main hashing functions are not exposed. One or more of
+ * the following must be defined before including the header file:
+ *
+ *   #define ARGON2I
+ *   #define ARGON2D
+ *   #define ARGON2ID
+ *
+ * Then also defined one or more of the following to enable to raw or
+ * encoded functions:
+ *
+ *   #define ARGON2_RAW
+ *   #define ARGON2_ENCODED
+ */
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -226,6 +240,8 @@ argon2_type2string(argon2_type type, int uppercase);
 static int
 argon2_ctx(argon2_context *context, argon2_type type);
 
+#ifdef ARGON2I
+#ifdef ARGON2_ENCODED
 /**
  * Hashes a password with Argon2i, producing an encoded hash
  * @param t_cost Number of iterations
@@ -249,7 +265,9 @@ argon2i_hash_encoded(const uint32_t t_cost,
                      const void *salt, const size_t saltlen,
                      const size_t hashlen, char *encoded,
                      const size_t encodedlen);
+#endif /* ARGON2_ENCODED */
 
+#ifdef ARGON2_RAW
 /**
  * Hashes a password with Argon2i, producing a raw hash at @hash
  * @param t_cost Number of iterations
@@ -270,7 +288,11 @@ argon2i_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
                  const size_t pwdlen, const void *salt,
                  const size_t saltlen, void *hash,
                  const size_t hashlen);
+#endif /* ARGON2_RAW */
+#endif /* ARGON2I */
 
+#ifdef ARGON2D
+#ifdef ARGON2_ENCODED
 static int
 argon2d_hash_encoded(const uint32_t t_cost,
                      const uint32_t m_cost,
@@ -279,14 +301,20 @@ argon2d_hash_encoded(const uint32_t t_cost,
                      const void *salt, const size_t saltlen,
                      const size_t hashlen, char *encoded,
                      const size_t encodedlen);
+#endif /* ARGON2_ENCODED */
 
+#ifdef ARGON2_RAW
 static int
 argon2d_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
                  const uint32_t parallelism, const void *pwd,
                  const size_t pwdlen, const void *salt,
                  const size_t saltlen, void *hash,
                  const size_t hashlen);
+#endif /* ARGON2_RAW */
+#endif /* ARGON2D */
 
+#ifdef ARGON2ID
+#ifdef ARGON2_ENCODED
 static int
 argon2id_hash_encoded(const uint32_t t_cost,
                       const uint32_t m_cost,
@@ -295,7 +323,9 @@ argon2id_hash_encoded(const uint32_t t_cost,
                       const void *salt, const size_t saltlen,
                       const size_t hashlen, char *encoded,
                       const size_t encodedlen);
+#endif /* ARGON2_ENCODED */
 
+#ifdef ARGON2_RAW
 static int
 argon2id_hash_raw(const uint32_t t_cost,
                   const uint32_t m_cost,
@@ -303,6 +333,7 @@ argon2id_hash_raw(const uint32_t t_cost,
                   const size_t pwdlen, const void *salt,
                   const size_t saltlen, void *hash,
                   const size_t hashlen);
+#endif /* ARGON2_RAW */
 
 /* generic function underlying the above ones */
 static int
@@ -313,6 +344,7 @@ argon2_hash(const uint32_t t_cost, const uint32_t m_cost,
             const size_t hashlen, char *encoded,
             const size_t encodedlen, argon2_type type,
             const uint32_t version);
+#endif /* ARGON2ID */
 
 /**
  * Get the associated error message for given error code
@@ -321,6 +353,7 @@ argon2_hash(const uint32_t t_cost, const uint32_t m_cost,
 static const char *
 argon2_error_message(int error_code);
 
+#if ARGON2_ENCODED
 /**
  * Returns the encoded hash length for the given input parameters
  * @param t_cost  Number of iterations
@@ -335,6 +368,7 @@ static size_t
 argon2_encodedlen(uint32_t t_cost, uint32_t m_cost,
                   uint32_t parallelism, uint32_t saltlen,
                   uint32_t hashlen, argon2_type type);
+#endif /* ARGON2_ENCODED */
 
 /* Implementation */
 
@@ -722,6 +756,7 @@ static int
 encode_string(char *dst, size_t dst_len, argon2_context *ctx,
               argon2_type type);
 
+#ifdef ARGON2_ENCODED
 /* Returns the length of the encoded byte stream with length len */
 static size_t
 b64len(uint32_t len);
@@ -729,6 +764,7 @@ b64len(uint32_t len);
 /* Returns the length of the encoded number num */
 static size_t
 numlen(uint32_t num);
+#endif /* ARGON2_ENCODED */
 
 /***************Instance and Position constructors**********/
 static void
@@ -1978,6 +2014,7 @@ encode_string(char *dst, size_t dst_len, argon2_context *ctx,
 #undef SB
 }
 
+#ifdef ARGON2_ENCODED
 static size_t
 b64len(uint32_t len)
 {
@@ -2005,6 +2042,7 @@ numlen(uint32_t num)
     }
     return len;
 }
+#endif /* ARGON2_ENCODED */
 
 static const char *
 argon2_type2string(argon2_type type, int uppercase)
@@ -2165,6 +2203,8 @@ argon2_hash(const uint32_t t_cost, const uint32_t m_cost,
     return ARGON2_OK;
 }
 
+#ifdef ARGON2I
+#ifdef ARGON2_ENCODED
 static int
 argon2i_hash_encoded(const uint32_t t_cost, const uint32_t m_cost,
         const uint32_t parallelism, const void *pwd,
@@ -2176,7 +2216,9 @@ argon2i_hash_encoded(const uint32_t t_cost, const uint32_t m_cost,
             NULL, hashlen, encoded, encodedlen, Argon2_i,
             ARGON2_VERSION_NUMBER);
 }
+#endif /* ARGON2_ENCODED */
 
+#ifdef ARGON2_RAW
 static int
 argon2i_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
         const uint32_t parallelism, const void *pwd,
@@ -2186,7 +2228,11 @@ argon2i_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
     return argon2_hash(t_cost, m_cost, parallelism, pwd, pwdlen, salt, saltlen,
             hash, hashlen, NULL, 0, Argon2_i, ARGON2_VERSION_NUMBER);
 }
+#endif /* ARGON2_RAW */
+#endif /* ARGON2I */
 
+#ifdef ARGON2D
+#ifdef ARGON2_ENCODED
 static int
 argon2d_hash_encoded(const uint32_t t_cost, const uint32_t m_cost,
         const uint32_t parallelism, const void *pwd,
@@ -2198,7 +2244,9 @@ argon2d_hash_encoded(const uint32_t t_cost, const uint32_t m_cost,
             NULL, hashlen, encoded, encodedlen, Argon2_d,
             ARGON2_VERSION_NUMBER);
 }
+#endif /* ARGON2_ENCODED */
 
+#ifdef ARGON2_RAW
 static int
 argon2d_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
         const uint32_t parallelism, const void *pwd,
@@ -2208,7 +2256,11 @@ argon2d_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
     return argon2_hash(t_cost, m_cost, parallelism, pwd, pwdlen, salt, saltlen,
             hash, hashlen, NULL, 0, Argon2_d, ARGON2_VERSION_NUMBER);
 }
+#endif /* ARGON2_RAW */
+#endif /* ARGON2D */
 
+#ifdef ARGON2ID
+#ifdef ARGON2_ENCODED
 static int
 argon2id_hash_encoded(const uint32_t t_cost, const uint32_t m_cost,
         const uint32_t parallelism, const void *pwd,
@@ -2220,7 +2272,9 @@ argon2id_hash_encoded(const uint32_t t_cost, const uint32_t m_cost,
             NULL, hashlen, encoded, encodedlen, Argon2_id,
             ARGON2_VERSION_NUMBER);
 }
+#endif /* ARGON2_ENCODED */
 
+#ifdef ARGON2_RAW
 static int
 argon2id_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
         const uint32_t parallelism, const void *pwd,
@@ -2231,6 +2285,8 @@ argon2id_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
             hash, hashlen, NULL, 0, Argon2_id,
             ARGON2_VERSION_NUMBER);
 }
+#endif /* ARGON2_RAW */
+#endif /* ARGON2ID */
 
 static const char *
 argon2_error_message(int error_code)
@@ -2307,6 +2363,7 @@ argon2_error_message(int error_code)
     }
 }
 
+#ifdef ARGON2_ENCODED
 static size_t
 argon2_encodedlen(uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
         uint32_t saltlen, uint32_t hashlen, argon2_type type) {
@@ -2314,5 +2371,6 @@ argon2_encodedlen(uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
         numlen(t_cost) + numlen(m_cost) + numlen(parallelism) +
         b64len(saltlen) + b64len(hashlen) + numlen(ARGON2_VERSION_NUMBER) + 1;
 }
+#endif /* ARGON2_ENCODED */
 
 #endif

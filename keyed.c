@@ -16,6 +16,8 @@
 #include <sys/uio.h>
 #include <sys/ptrace.h>
 
+#define ARGON2ID
+#define ARGON2_RAW
 #include "argon2.h"
 #include "chacha20.h"
 
@@ -183,12 +185,12 @@ main(int argc, char **argv)
     unsigned char salt[8] = {0};
     unsigned long long t_cost = 3;
     size_t m_cost = 1UL << 18;
-    if (argon2id_hash_raw(t_cost, m_cost, 1,
-                          passphrase, strlen(passphrase),
-                          salt, sizeof(salt),
-                          key, sizeof(key)) != ARGON2_OK) {
-        fputs("not enough memory to derive key", stderr);
-        exit(EXIT_FAILURE);
+    int r = argon2id_hash_raw(t_cost, m_cost, 1,
+                              passphrase, strlen(passphrase),
+                              salt, sizeof(salt),
+                              key, sizeof(key));
+    if (r != ARGON2_OK) {
+        fatal("%s", argon2_error_message(r));
     }
 
     /* Initialize ChaCha20 */
@@ -381,12 +383,4 @@ main(int argc, char **argv)
             } break;
         }
     }
-
-    (void)argon2_encodedlen;
-    (void)argon2_error_message;
-    (void)argon2id_hash_encoded;
-    (void)argon2d_hash_raw;
-    (void)argon2d_hash_encoded;
-    (void)argon2i_hash_raw;
-    (void)argon2i_hash_encoded;
 }
