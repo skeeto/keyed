@@ -5,6 +5,9 @@
 
 #define CHACHA20_KEYSIZE  32
 #define CHACHA20_IVSIZE   8
+#ifndef CHACHA20_ROUNDS
+#  define CHACHA20_ROUNDS 20
+#endif
 
 struct chacha20 {
     uint32_t input[16];
@@ -52,7 +55,7 @@ salsa20_wordtobyte(unsigned char output[64], const uint32_t input[16])
 
     for (i = 0; i < 16; ++i)
         x[i] = input[i];
-    for (i = 20; i > 0; i -= 2) {
+    for (i = CHACHA20_ROUNDS; i > 0; i -= 2) {
         CHACHA20_QUARTERROUND( 0, 4, 8,12);
         CHACHA20_QUARTERROUND( 1, 5, 9,13);
         CHACHA20_QUARTERROUND( 2, 6,10,14);
@@ -96,29 +99,30 @@ chacha20_init(struct chacha20 *x, const void *key, const void *iv)
 static void
 chacha20_keystream_bytes(struct chacha20 *x, void *buf, size_t bytes)
 {
-    size_t i;
     unsigned char *p = buf;
 
     while (x->outlen && bytes) {
-        *p++ = x->output[64 - x->outlen];
+        int i = 64 - x->outlen;
+        *p++ = x->output[i];
+        x->output[i] = 0;
         bytes--;
         x->outlen--;
     }
 
-    if (!bytes) return;
-    for (;;) {
-        salsa20_wordtobyte(x->output, x->input);
-        x->input[12]++;
-        if (!x->input[12])
+    while (bytes) {
+        unsigned char *dest = bytes < 64 ? x->output : p;
+        salsa20_wordtobyte(dest, x->input);
+        if (!++x->input[12])
             x->input[13]++;
-        if (bytes <= 64) {
-            for (i = 0; i < bytes; i++)
+        if (bytes < 64) {
+            size_t i;
+            for (i = 0; i < bytes; i++) {
                 p[i] = x->output[i];
+                x->output[i] = 0;
+            }
             x->outlen = 64 - bytes;
             return;
         }
-        for (i = 0; i < 64; i++)
-            p[i] = x->output[i];
         bytes -= 64;
         p += 64;
     }
